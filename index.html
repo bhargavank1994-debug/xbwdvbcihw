@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BK Departure Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f3; color: #1a1a1a; padding: 20px; line-height: 1.5; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 24px; font-weight: 500; margin-bottom: 4px; }
+  .subtitle { color: #666; font-size: 14px; margin-bottom: 24px; }
+  .tab-nav { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid #e5e5e0; flex-wrap: wrap; }
+  .tab-btn { background: transparent; border: none; padding: 10px 16px; cursor: pointer; font-size: 14px; font-weight: 500; color: #666; border-bottom: 2px solid transparent; margin-bottom: -1px; font-family: inherit; }
+  .tab-btn:hover { color: #1a1a1a; background: #f1efe8; }
+  .tab-btn.active { color: #0c447c; border-bottom-color: #378ADD; }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 24px; }
+  .stat { background: #ffffff; border: 1px solid #e5e5e0; border-radius: 8px; padding: 14px; }
+  .stat-label { font-size: 12px; color: #666; margin-bottom: 4px; }
+  .stat-value { font-size: 22px; font-weight: 500; }
+  .stat.final { background: #e6f1fb; border-color: #b5d4f4; }
+  .stat.final .stat-value, .stat.final .stat-label { color: #0c447c; }
+  .stat.good .stat-value { color: #0f6e56; }
+  .stat.bad .stat-value { color: #a32d2d; }
+  .stat.warn .stat-value { color: #b06d00; }
+  .stat-sub { font-size: 11px; color: #888; margin-top: 4px; }
+  .card { background: #ffffff; border: 1px solid #e5e5e0; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; }
+  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+  .card-title { font-size: 15px; font-weight: 500; }
+  button { background: #ffffff; border: 1px solid #d3d1c7; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 12px; color: #1a1a1a; font-family: inherit; }
+  button:hover { background: #f1efe8; border-color: #b4b2a9; }
+  .reset-btn { font-size: 12px; padding: 4px 10px; }
+  input, select { width: 100%; padding: 8px 10px; border: 1px solid #d3d1c7; border-radius: 6px; font-family: inherit; font-size: 13px; background: #ffffff; }
+  input:focus, select:focus { outline: 2px solid #378ADD; outline-offset: -1px; border-color: #378ADD; }
+  label { font-size: 11px; color: #666; display: block; margin-bottom: 3px; }
+  .row { display: grid; gap: 8px; margin-bottom: 8px; align-items: end; }
+  .row-account { grid-template-columns: 2fr 1fr auto; }
+  .row-stream { grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr auto; }
+  .del-btn { height: 36px; padding: 0 12px; font-size: 18px; line-height: 1; color: #a32d2d; }
+  .days-info { font-size: 12px; color: #666; margin-top: 8px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+  .table { width: 100%; font-size: 13px; border-collapse: collapse; }
+  .table th, .table td { padding: 8px 6px; text-align: left; border-bottom: 1px solid #e5e5e0; }
+  .table th { font-size: 11px; font-weight: 500; color: #666; text-transform: uppercase; letter-spacing: 0.05em; }
+  .table td.num, .table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pos { color: #0f6e56; }
+  .neg { color: #a32d2d; }
+  .warn { color: #b06d00; }
+  .dim { color: #999; }
+  .running { font-weight: 500; }
+  .mode-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .mode-btns button { padding: 8px 14px; font-size: 13px; }
+  .mode-btns button.active { background: #1a1a1a; color: #ffffff; border-color: #1a1a1a; }
+  .notice { background: #faedda; border: 1px solid #fac775; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #633806; margin-bottom: 16px; }
+  .notice.success { background: #e0f4ec; border-color: #91d4b8; color: #0a4a36; }
+  .flag-row { display: flex; padding: 8px 0; border-bottom: 1px solid #e5e5e0; font-size: 13px; }
+  .flag-row:last-child { border-bottom: none; }
+  .export-bar { display: flex; gap: 8px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e5e0; flex-wrap: wrap; }
+  @media (max-width: 768px) {
+    body { padding: 12px; }
+    .row-stream { grid-template-columns: 1fr 1fr; }
+    .row-stream > * { grid-column: span 1; }
+    .row-stream .del-btn { grid-column: 1 / -1; justify-self: end; }
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+  }
+  footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e5e0; font-size: 12px; color: #888; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 8px;">
+  <div>
+    <h1>BK Departure Cash Dashboard</h1>
+    <div class="subtitle" id="subtitle">Target: August 15, 2026</div>
+  </div>
+  <button class="reset-btn" onclick="resetAll()">Reset to defaults</button>
+</div>
+
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('bk')" id="tab-btn-bk">BK Departure</button>
+  <button class="tab-btn" onclick="switchTab('prop')" id="tab-btn-prop">Prop Firms</button>
+  <button class="tab-btn" onclick="switchTab('combined')" id="tab-btn-combined">Combined Total</button>
+</div>
+
+<div class="tab-pane active" id="tab-bk">
+<div class="notice">Changes save automatically. Use Export JSON to back up.</div>
+<div class="mode-btns" id="mode-btns"></div>
+<div class="stats">
+  <div class="stat"><div class="stat-label">Starting cash</div><div class="stat-value" id="stat-start">$0</div></div>
+  <div class="stat good"><div class="stat-label">Trading gains</div><div class="stat-value" id="stat-trading">$0</div></div>
+  <div class="stat good"><div class="stat-label">Other income</div><div class="stat-value" id="stat-other">$0</div></div>
+  <div class="stat bad"><div class="stat-label">Outflows</div><div class="stat-value" id="stat-outflow">$0</div></div>
+  <div class="stat final"><div class="stat-label">At departure</div><div class="stat-value" id="stat-final">$0</div><div class="stat-sub" id="stat-final-sub"></div></div>
+</div>
+<div class="card">
+  <div class="card-title" style="margin-bottom: 12px;">Settings</div>
+  <div class="grid-4">
+    <div><label>Start date</label><input type="date" id="start-date"></div>
+    <div><label>Departure date</label><input type="date" id="end-date"></div>
+    <div><label>Target cash ($)</label><input type="number" id="target-cash" step="1000"></div>
+    <div><label>Safe buffer ($)</label><input type="number" id="safe-buffer" step="500"></div>
+  </div>
+  <div class="days-info" id="days-display"></div>
+</div>
+<div class="card"><div class="card-header"><div class="card-title">Account balances</div><button onclick="addAccount()">+ Add</button></div><div id="accounts-list"></div></div>
+<div class="card"><div class="card-header"><div class="card-title">Incomes</div><button onclick="addIncome()">+ Add</button></div><div id="incomes-list"></div></div>
+<div class="card"><div class="card-header"><div class="card-title">Expenses</div><button onclick="addExpense()">+ Add</button></div><div id="expenses-list"></div></div>
+<div class="card">
+  <div class="card-header"><div class="card-title">Period breakdown</div>
+    <div><button onclick="setView('weekly')" id="view-weekly">Weekly</button><button onclick="setView('monthly')" id="view-monthly">Monthly</button></div>
+  </div>
+  <table class="table"><thead><tr><th>Period</th><th class="num">In</th><th class="num">Out</th><th class="num">Net</th><th class="num">Running</th></tr></thead><tbody id="period-body"></tbody></table>
+</div>
+<div class="card"><div class="card-title" style="margin-bottom: 12px;">Risk flags</div><div id="bk-flags"></div></div>
+</div>
+
+<div class="tab-pane" id="tab-prop">
+<div class="notice">Each account requires a buffer build (default $2,100) — that money stays locked in the sim account, NOT withdrawable. Withdrawable cash = payouts × cap × profit split.</div>
+<div class="card">
+  <div class="card-title" style="margin-bottom: 12px;">Account configuration</div>
+  <div class="grid-4">
+    <div><label>LucidFlex 50K accounts</label><input type="number" id="prop-lucid" step="1" min="0" max="20"></div>
+    <div><label>MFFU Rapid 50K accounts</label><input type="number" id="prop-mffu" step="1" min="0" max="20"></div>
+    <div><label>Funded start date</label><input type="date" id="prop-start"></div>
+    <div><label>Departure (from BK tab)</label><input type="text" id="prop-end-display" disabled style="background: #f5f5f3;"></div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-title" style="margin-bottom: 12px;">Trading parameters</div>
+  <div class="grid-4">
+    <div><label>Daily target per account ($)</label><input type="number" id="prop-daily" step="50"></div>
+    <div><label>Payouts per account</label><input type="number" id="prop-payouts" step="1" min="1" max="50"></div>
+    <div><label>Buffer per account ($) — locked</label><input type="number" id="prop-buffer" step="100"></div>
+    <div><label>Payout cap ($)</label><input type="number" id="prop-cap" step="100"></div>
+  </div>
+  <div class="grid-2">
+    <div><label>Profit split (%)</label><input type="number" id="prop-split" step="1" min="50" max="100"></div>
+    <div><label>&nbsp;</label><button onclick="autoMaxPayouts()" style="width:100%;padding:8px">↓ Auto-set max payouts that fit before departure</button></div>
+  </div>
+</div>
+<div class="stats">
+  <div class="stat good"><div class="stat-label">Net withdrawable cash</div><div class="stat-value" id="prop-net">$0</div><div class="stat-sub" id="prop-net-sub"></div></div>
+  <div class="stat"><div class="stat-label">Total payouts</div><div class="stat-value" id="prop-payouts-stat">0</div><div class="stat-sub" id="prop-payouts-sub"></div></div>
+  <div class="stat warn"><div class="stat-label">Locked in buffers</div><div class="stat-value" id="prop-locked">$0</div><div class="stat-sub" id="prop-locked-sub"></div></div>
+  <div class="stat"><div class="stat-label">Trading days</div><div class="stat-value" id="prop-days">0</div><div class="stat-sub" id="prop-days-sub"></div></div>
+  <div class="stat final"><div class="stat-label">Done by</div><div class="stat-value" id="prop-done">—</div><div class="stat-sub" id="prop-cushion"></div></div>
+</div>
+<div class="card">
+  <div class="card-title" style="margin-bottom: 12px;">Per-firm breakdown</div>
+  <table class="table"><thead><tr><th>Firm</th><th class="num">Accts</th><th class="num">Eval</th><th class="num">Buffer</th><th class="num">Cycle</th><th class="num">Days/acct</th><th class="num">Net/payout</th><th class="num">Net/acct</th><th class="num">Locked</th><th class="num">Total net</th></tr></thead><tbody id="firm-body"></tbody></table>
+  <div class="days-info" style="margin-top:8px">Lucid Flex requires min 5 trading days per cycle. MFFU Rapid has no min-day rule.</div>
+</div>
+<div class="card">
+  <div class="card-title" style="margin-bottom: 12px;">Phase timeline</div>
+  <table class="table"><thead><tr><th>Phase</th><th>Window</th><th class="num">Days</th><th class="num">Cumulative</th><th>Notes</th></tr></thead><tbody id="phase-body"></tbody></table>
+</div>
+<div class="card">
+  <div class="card-title" style="margin-bottom: 12px;">Daily target sensitivity</div>
+  <table class="table"><thead><tr><th class="num">$/day</th><th class="num">Combined/day</th><th class="num">Days needed</th><th class="num">Done by</th><th class="num">Net cash</th><th class="num">Cushion</th><th>Risk</th></tr></thead><tbody id="sensitivity-body"></tbody></table>
+</div>
+<div class="card">
+  <div class="card-title" style="margin-bottom: 12px;">Payouts table</div>
+  <table class="table"><thead><tr><th class="num">Payouts/acct</th><th class="num">Days needed</th><th class="num">Done by</th><th class="num">Net cash</th><th class="num">Locked</th><th class="num">Cushion</th></tr></thead><tbody id="payouts-body"></tbody></table>
+</div>
+<div class="card"><div class="card-title" style="margin-bottom: 12px;">Risk flags</div><div id="prop-flags"></div></div>
+</div>
+
+<div class="tab-pane" id="tab-combined">
+<div class="notice success">Grand total = BK dashboard cash + Prop firm net extraction.</div>
+<div class="stats">
+  <div class="stat"><div class="stat-label">BK at departure</div><div class="stat-value" id="combo-bk">$0</div><div class="stat-sub" id="combo-bk-sub"></div></div>
+  <div class="stat good"><div class="stat-label">Prop firms net</div><div class="stat-value" id="combo-prop">$0</div><div class="stat-sub" id="combo-prop-sub"></div></div>
+  <div class="stat final"><div class="stat-label">Grand total</div><div class="stat-value" id="combo-grand">$0</div><div class="stat-sub" id="combo-grand-sub"></div></div>
+  <div class="stat"><div class="stat-label">Target</div><div class="stat-value" id="combo-target">$0</div></div>
+  <div class="stat" id="combo-gap-stat"><div class="stat-label">Gap</div><div class="stat-value" id="combo-gap">$0</div></div>
+</div>
+<div class="card"><div class="card-title" style="margin-bottom: 12px;">Source breakdown</div>
+  <table class="table"><thead><tr><th>Source</th><th class="num">Amount</th><th class="num">% of grand</th></tr></thead><tbody id="combo-body"></tbody></table>
+</div>
+</div>
+
+<div class="export-bar">
+  <button onclick="exportJSON()">Export JSON</button>
+  <button onclick="document.getElementById('import-file').click()">Import JSON</button>
+  <input type="file" id="import-file" accept=".json" style="display:none">
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+
+<footer>Built for Bhargavan. Local browser storage only — no data leaves this file.<br>Not financial or legal advice. Validate BK with Travis.</footer>
+
+</div>
+
+<script>
+'use strict';
+const STORAGE_KEY = 'bk_dashboard_v2';
+
+const DEFAULTS = {
+  activeTab: 'bk',
+  activeMode: 'optimistic',
+  plan: {
+    settings: { startDate: '2026-05-04', endDate: '2026-08-15', targetCash: 165000, viewMode: 'weekly', safeBuffer: 0 },
+    accounts: [
+      { name: 'Chase checking', amount: 22600 },
+      { name: 'Webull', amount: 32000 },
+      { name: 'AMP Futures', amount: 2000 }
+    ],
+    incomes: [
+      { name: 'AMP MNQ', amount: 1000, frequency: 'daily_weekday', startDate: '2026-05-04', endDate: '2026-08-15' },
+      { name: 'Webull trading', amount: 0, frequency: 'daily_weekday', startDate: '2026-05-01', endDate: '2026-08-15' },
+      { name: 'Paycheck savings', amount: 10200, frequency: 'monthly', startDate: '2026-06-01', endDate: '2026-08-14' },
+      { name: 'RSU vest', amount: 2300, frequency: 'one_time', startDate: '2026-05-15', endDate: '2026-05-15' },
+      { name: 'Bank bonuses', amount: 1175, frequency: 'one_time', startDate: '2026-07-15', endDate: '2026-07-15' },
+      { name: 'Car Sale', amount: 7500, frequency: 'one_time', startDate: '2026-08-10', endDate: '2026-08-10' },
+      { name: 'Chapter-13 May Refund', amount: 3718, frequency: 'one_time', startDate: '2026-06-04', endDate: '2026-06-04' },
+      { name: 'Amazon Relocation', amount: 2000, frequency: 'one_time', startDate: '2026-08-10', endDate: '2026-08-10' },
+      { name: 'Amazon PTO Unused', amount: 15000, frequency: 'one_time', startDate: '2026-08-10', endDate: '2026-08-10' }
+    ],
+    expenses: [
+      { name: 'Monthly expenses', amount: 4100, frequency: 'monthly', startDate: '2026-06-01', endDate: '2026-08-15' }
+    ]
+  },
+  modeOverrides: {
+    optimistic: { amp: 1000, webull: 0 },
+    moderate: { amp: 500, webull: 100 },
+    realistic: { amp: 400, webull: 0 },
+    conservative: { amp: 0, webull: 0 }
+  },
+  propFirms: { dailyTarget: 400, payoutsPerAccount: 8, bufferPerAccount: 2100, payoutCap: 2000, profitSplit: 90, startDate: '2026-05-06', lucidAccounts: 5, mffuAccounts: 3 }
+};
+
+const MODE_LABELS = { optimistic: 'Optimistic', moderate: 'Moderate', realistic: 'Realistic', conservative: 'Conservative' };
+
+let state;
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return migrate(JSON.parse(saved));
+  } catch (e) { console.error('Load error:', e); }
+  return JSON.parse(JSON.stringify(DEFAULTS));
+}
+
+function migrate(data) {
+  const def = DEFAULTS;
+  if (!data.activeTab) data.activeTab = def.activeTab;
+  if (!data.activeMode) data.activeMode = def.activeMode;
+  if (!data.plan) data.plan = JSON.parse(JSON.stringify(def.plan));
+  if (!data.plan.settings) data.plan.settings = JSON.parse(JSON.stringify(def.plan.settings));
+  if (!Array.isArray(data.plan.accounts)) data.plan.accounts = JSON.parse(JSON.stringify(def.plan.accounts));
+  if (!Array.isArray(data.plan.incomes)) data.plan.incomes = JSON.parse(JSON.stringify(def.plan.incomes));
+  if (!Array.isArray(data.plan.expenses)) data.plan.expenses = JSON.parse(JSON.stringify(def.plan.expenses));
+  if (!data.modeOverrides) data.modeOverrides = JSON.parse(JSON.stringify(def.modeOverrides));
+  if (data.plan.settings.targetCash === undefined) data.plan.settings.targetCash = def.plan.settings.targetCash;
+  if (data.plan.settings.safeBuffer === undefined) data.plan.settings.safeBuffer = 0;
+  if (!data.plan.settings.viewMode) data.plan.settings.viewMode = 'weekly';
+  if (!data.propFirms) data.propFirms = JSON.parse(JSON.stringify(def.propFirms));
+  ['dailyTarget','payoutsPerAccount','bufferPerAccount','payoutCap','profitSplit','startDate','lucidAccounts','mffuAccounts'].forEach(k => {
+    if (data.propFirms[k] === undefined) data.propFirms[k] = def.propFirms[k];
+  });
+  if (data.propFirms.strategy !== undefined) delete data.propFirms.strategy;
+  return data;
+}
+
+function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { console.error(e); } }
+
+function fmt(n) { const r = Math.round(n); return (r < 0 ? '-' : '') + '$' + Math.abs(r).toLocaleString(); }
+function escapeAttr(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function toISO(d) { const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,'0'); const day = String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+function daysBetween(d1, d2) { if (!d1 || !d2) return 0; return Math.max(0, Math.round((new Date(d2)-new Date(d1))/86400000)); }
+function tradingDaysBetween(d1, d2) { if (!d1 || !d2 || d1 > d2) return 0; let c = 0; const cur = new Date(d1); const end = new Date(d2); while (cur <= end) { const dw = cur.getDay(); if (dw !== 0 && dw !== 6) c++; cur.setDate(cur.getDate()+1); } return c; }
+function addTradingDays(s, n) { if (!s || n <= 0) return s; const cur = new Date(s); while (cur.getDay() === 0 || cur.getDay() === 6) cur.setDate(cur.getDate()+1); let a = 1; while (a < n) { cur.setDate(cur.getDate()+1); if (cur.getDay() !== 0 && cur.getDay() !== 6) a++; } return toISO(cur); }
+function monthsBetween(d1, d2) { if (!d1 || !d2 || d1 > d2) return 0; const s = new Date(d1), e = new Date(d2); const m = (e.getFullYear()-s.getFullYear())*12 + (e.getMonth()-s.getMonth()); return Math.max(0, m + (e.getDate()-s.getDate())/30); }
+function fmtDate(iso) { try { return new Date(iso).toLocaleDateString('en-US', {month:'short', day:'numeric'}); } catch(e) { return iso; } }
+
+function switchTab(tab) {
+  state.activeTab = tab;
+  saveState();
+  document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  const pane = document.getElementById('tab-' + tab);
+  const btn = document.getElementById('tab-btn-' + tab);
+  if (pane) pane.classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (tab === 'combined') renderCombined();
+}
+
+function applyMode(mode) {
+  state.activeMode = mode;
+  const ovr = state.modeOverrides[mode];
+  if (ovr) {
+    state.plan.incomes.forEach(inc => {
+      const lower = (inc.name || '').toLowerCase();
+      if (lower.includes('amp')) inc.amount = ovr.amp;
+      else if (lower.includes('webull')) inc.amount = ovr.webull;
+    });
+  }
+  saveState();
+  renderBKAll();
+}
+
+function renderModeBtns() {
+  document.getElementById('mode-btns').innerHTML = Object.keys(MODE_LABELS).map(m => {
+    const o = state.modeOverrides[m] || {};
+    const tot = (o.amp||0) + (o.webull||0);
+    return `<button onclick="applyMode('${m}')" class="${state.activeMode === m ? 'active' : ''}">${MODE_LABELS[m]} ($${tot}/day)</button>`;
+  }).join('');
+}
+
+function renderAccounts() {
+  document.getElementById('accounts-list').innerHTML = state.plan.accounts.map((a, i) => `
+    <div class="row row-account">
+      <div><label>Account</label><input type="text" value="${escapeAttr(a.name)}" data-i="${i}" data-f="name" oninput="updateAccount(this)"></div>
+      <div><label>Balance ($)</label><input type="number" value="${a.amount}" step="100" data-i="${i}" data-f="amount" oninput="updateAccount(this)"></div>
+      <button class="del-btn" onclick="delAccount(${i})">×</button>
+    </div>`).join('');
+}
+
+function updateAccount(el) {
+  const i = +el.dataset.i, f = el.dataset.f;
+  state.plan.accounts[i][f] = f === 'amount' ? (Number(el.value) || 0) : el.value;
+  saveState();
+  recalc();
+}
+
+function addAccount() { state.plan.accounts.push({name: 'New account', amount: 0}); saveState(); renderAccounts(); recalc(); }
+function delAccount(i) { state.plan.accounts.splice(i, 1); saveState(); renderAccounts(); recalc(); }
+
+function renderStreams(arrName, listId) {
+  const arr = state.plan[arrName];
+  document.getElementById(listId).innerHTML = arr.map((s, i) => `
+    <div class="row row-stream">
+      <div><label>Name</label><input type="text" value="${escapeAttr(s.name)}" data-arr="${arrName}" data-i="${i}" data-f="name" oninput="updateStream(this)"></div>
+      <div><label>Amount ($)</label><input type="number" value="${s.amount}" step="100" data-arr="${arrName}" data-i="${i}" data-f="amount" oninput="updateStream(this)"></div>
+      <div><label>Frequency</label>
+        <select data-arr="${arrName}" data-i="${i}" data-f="frequency" onchange="updateStream(this)">
+          <option value="daily_weekday" ${s.frequency==='daily_weekday'?'selected':''}>Daily (weekday)</option>
+          <option value="monthly" ${s.frequency==='monthly'?'selected':''}>Monthly</option>
+          <option value="one_time" ${s.frequency==='one_time'?'selected':''}>One-time</option>
+        </select>
+      </div>
+      <div><label>Start</label><input type="date" value="${s.startDate||''}" data-arr="${arrName}" data-i="${i}" data-f="startDate" onchange="updateStream(this)"></div>
+      <div><label>End</label><input type="date" value="${s.endDate||''}" data-arr="${arrName}" data-i="${i}" data-f="endDate" onchange="updateStream(this)"></div>
+      <button class="del-btn" onclick="delStream('${arrName}',${i})">×</button>
+    </div>`).join('');
+}
+
+function updateStream(el) {
+  const arr = el.dataset.arr, i = +el.dataset.i, f = el.dataset.f;
+  state.plan[arr][i][f] = f === 'amount' ? (Number(el.value) || 0) : el.value;
+  saveState();
+  recalc();
+}
+
+function addIncome() { state.plan.incomes.push({name:'New income', amount:0, frequency:'one_time', startDate:state.plan.settings.endDate, endDate:state.plan.settings.endDate}); saveState(); renderStreams('incomes','incomes-list'); recalc(); }
+function addExpense() { state.plan.expenses.push({name:'New expense', amount:0, frequency:'monthly', startDate:state.plan.settings.startDate, endDate:state.plan.settings.endDate}); saveState(); renderStreams('expenses','expenses-list'); recalc(); }
+function delStream(arr, i) { state.plan[arr].splice(i, 1); saveState(); renderStreams(arr, arr === 'incomes' ? 'incomes-list' : 'expenses-list'); recalc(); }
+
+function calcStreamTotal(s, pStart, pEnd) {
+  const sStart = s.startDate && s.startDate > pStart ? s.startDate : pStart;
+  const sEnd = s.endDate && s.endDate < pEnd ? s.endDate : pEnd;
+  if (sStart > sEnd) return 0;
+  const amt = Number(s.amount) || 0;
+  if (amt === 0) return 0;
+  if (s.frequency === 'daily_weekday') return tradingDaysBetween(sStart, sEnd) * amt;
+  if (s.frequency === 'monthly') return monthsBetween(sStart, sEnd) * amt;
+  if (s.frequency === 'one_time') {
+    const d = s.startDate || s.endDate;
+    return (d && d >= pStart && d <= pEnd) ? amt : 0;
+  }
+  return 0;
+}
+
+function recalc() {
+  const sd = document.getElementById('start-date');
+  const ed = document.getElementById('end-date');
+  const tc = document.getElementById('target-cash');
+  const sb = document.getElementById('safe-buffer');
+  if (sd && sd.value) state.plan.settings.startDate = sd.value;
+  if (ed && ed.value) state.plan.settings.endDate = ed.value;
+  if (tc) state.plan.settings.targetCash = Number(tc.value) || 0;
+  if (sb) state.plan.settings.safeBuffer = Number(sb.value) || 0;
+  saveState();
+
+  const {startDate, endDate, targetCash} = state.plan.settings;
+  const tDays = tradingDaysBetween(startDate, endDate);
+  const cDays = daysBetween(startDate, endDate);
+  document.getElementById('days-display').textContent = `${cDays} calendar days · ${tDays} trading days · target ${fmt(targetCash)}`;
+  try { document.getElementById('subtitle').textContent = 'Target: ' + new Date(endDate).toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'}); } catch(e) {}
+
+  const startTotal = state.plan.accounts.reduce((s,a) => s + (Number(a.amount)||0), 0);
+  let trading = 0, other = 0;
+  state.plan.incomes.forEach(inc => {
+    const t = calcStreamTotal(inc, startDate, endDate);
+    if (inc.frequency === 'daily_weekday') trading += t;
+    else other += t;
+  });
+  let outflow = 0;
+  state.plan.expenses.forEach(e => outflow += calcStreamTotal(e, startDate, endDate));
+  const final = startTotal + trading + other - outflow;
+  const gap = targetCash - final;
+
+  document.getElementById('stat-start').textContent = fmt(startTotal);
+  document.getElementById('stat-trading').textContent = fmt(trading);
+  document.getElementById('stat-other').textContent = fmt(other);
+  document.getElementById('stat-outflow').textContent = '-' + fmt(outflow);
+  document.getElementById('stat-final').textContent = fmt(final);
+  const fs = document.getElementById('stat-final-sub');
+  if (gap > 0) { fs.textContent = `${fmt(gap)} short of target`; fs.style.color = '#a32d2d'; }
+  else { fs.textContent = `${fmt(-gap)} above target`; fs.style.color = '#0f6e56'; }
+
+  renderPeriod();
+  renderBKFlags(final, gap);
+  if (state.activeTab === 'combined') renderCombined();
+  const ed2 = document.getElementById('prop-end-display');
+  if (ed2) { try { ed2.value = new Date(endDate).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}); } catch(e){} }
+}
+
+function setView(mode) { state.plan.settings.viewMode = mode; saveState(); renderPeriod(); }
+
+function renderPeriod() {
+  const {startDate, endDate, viewMode} = state.plan.settings;
+  if (!startDate || !endDate) return;
+  document.getElementById('view-weekly').classList.toggle('active', viewMode === 'weekly');
+  document.getElementById('view-monthly').classList.toggle('active', viewMode === 'monthly');
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const tbody = document.getElementById('period-body');
+  if (!tbody) return;
+  const rows = [];
+  let running = state.plan.accounts.reduce((s,a) => s + (Number(a.amount)||0), 0);
+
+  function pushRow(label, pStartStr, pEndStr) {
+    let inflow = 0;
+    state.plan.incomes.forEach(inc => inflow += calcStreamTotal(inc, pStartStr, pEndStr));
+    let out = 0;
+    state.plan.expenses.forEach(e => out += calcStreamTotal(e, pStartStr, pEndStr));
+    const net = inflow - out;
+    running += net;
+    rows.push(`<tr><td>${label}</td><td class="num pos">${inflow > 0 ? fmt(inflow) : '-'}</td><td class="num neg">${out > 0 ? '-' + fmt(out) : '-'}</td><td class="num ${net>=0?'pos':'neg'}">${net>=0?'+':''}${fmt(net)}</td><td class="num running">${fmt(running)}</td></tr>`);
+  }
+
+  if (viewMode === 'monthly') {
+    let cur = new Date(start.getFullYear(), start.getMonth(), 1);
+    while (cur <= end) {
+      const pStart = cur > start ? new Date(cur) : new Date(start);
+      const next = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
+      const pEnd = next > end ? new Date(end) : new Date(next - 86400000);
+      pushRow(cur.toLocaleDateString('en-US',{month:'short',year:'2-digit'}), toISO(pStart), toISO(pEnd));
+      cur = next;
+    }
+  } else {
+    let cur = new Date(start);
+    while (cur.getDay() !== 1 && cur > start) cur.setDate(cur.getDate()-1);
+    while (cur <= end) {
+      const pStart = cur > start ? new Date(cur) : new Date(start);
+      const wEnd = new Date(cur); wEnd.setDate(wEnd.getDate()+6);
+      const pEnd = wEnd > end ? new Date(end) : wEnd;
+      pushRow('Wk ' + pStart.toLocaleDateString('en-US',{month:'short',day:'numeric'}), toISO(pStart), toISO(pEnd));
+      cur.setDate(cur.getDate()+7);
+    }
+  }
+  tbody.innerHTML = rows.join('');
+}
+
+function renderBKFlags(final, gap) {
+  const flags = [];
+  const chase = state.plan.accounts.find(a => (a.name||'').toLowerCase().includes('chase'));
+  if (chase && chase.amount > 500) flags.push({i:'🔴', t:`<strong>Chase has ${fmt(chase.amount)}</strong> — setoff risk post-BK dismissal. Drain to $100 buffer.`});
+  const ampInc = state.plan.incomes.find(i => (i.name||'').toLowerCase().includes('amp'));
+  if (ampInc && ampInc.amount > 500) flags.push({i:'⚠️', t:`<strong>AMP target $${ampInc.amount}/day</strong> — TopstepX accounts blew at $700/day in March 2026.`});
+  if (gap > 30000) flags.push({i:'⚠️', t:`<strong>${fmt(gap)} short of ${fmt(state.plan.settings.targetCash)} target.</strong> Consider prop firm payouts.`});
+  else if (gap > 0) flags.push({i:'ℹ️', t:`<strong>${fmt(gap)} short of target</strong> — within reach via prop firms.`});
+  else flags.push({i:'✓', t:`<strong>${fmt(-gap)} above target</strong> — strong runway.`});
+  if (flags.length === 0) flags.push({i:'ℹ️', t:'No flags triggered.'});
+  document.getElementById('bk-flags').innerHTML = flags.map(f => `<div class="flag-row"><div style="flex:1"><span style="margin-right:8px">${f.i}</span>${f.t}</div></div>`).join('');
+}
+
+function renderBKAll() {
+  const s = state.plan.settings;
+  document.getElementById('start-date').value = s.startDate || '';
+  document.getElementById('end-date').value = s.endDate || '';
+  document.getElementById('target-cash').value = s.targetCash || 0;
+  document.getElementById('safe-buffer').value = s.safeBuffer || 0;
+  renderModeBtns();
+  renderAccounts();
+  renderStreams('incomes', 'incomes-list');
+  renderStreams('expenses', 'expenses-list');
+  recalc();
+}
+
+function calcFirm(firm, p) {
+  const T = Math.max(50, p.dailyTarget || 0);
+  const split = (p.profitSplit || 90) / 100;
+  const eval_ = Math.max(2, Math.ceil(3000 / T));
+  const buf = (p.bufferPerAccount || 0) > 0 ? Math.ceil(p.bufferPerAccount / T) : 0;
+  const cycle = firm === 'lucid' ? Math.max(5, Math.ceil((p.payoutCap||2000) / T)) : Math.max(1, Math.ceil((p.payoutCap||2000) / T));
+  const gross = Math.min(p.payoutCap || 2000, T * cycle);
+  const net = gross < 500 ? 0 : gross * split;
+  const days = eval_ + buf + cycle * (p.payoutsPerAccount || 1);
+  return {evalDays:eval_, bufferDays:buf, cycleDays:cycle, grossPerPayout:gross, netPerPayout:net, daysPerAcct:days, netPerAcct: (p.payoutsPerAccount||1)*net};
+}
+
+function calcProp(p) {
+  const lucid = calcFirm('lucid', p);
+  const mffu = calcFirm('mffu', p);
+  const lA = p.lucidAccounts || 0;
+  const mA = p.mffuAccounts || 0;
+  return {
+    lucid: {...lucid, accounts:lA, total:lucid.netPerAcct*lA, locked:(p.bufferPerAccount||0)*lA},
+    mffu: {...mffu, accounts:mA, total:mffu.netPerAcct*mA, locked:(p.bufferPerAccount||0)*mA},
+    totalAccounts: lA+mA,
+    totalNet: lucid.netPerAcct*lA + mffu.netPerAcct*mA,
+    totalLocked: (p.bufferPerAccount||0)*(lA+mA),
+    totalPayouts: (p.payoutsPerAccount||0)*(lA+mA),
+    daysNeeded: Math.max(lucid.daysPerAcct, mffu.daysPerAcct)
+  };
+}
+
+function readProp() {
+  return {
+    dailyTarget: Number(document.getElementById('prop-daily').value) || 0,
+    payoutsPerAccount: Number(document.getElementById('prop-payouts').value) || 0,
+    bufferPerAccount: Number(document.getElementById('prop-buffer').value) || 0,
+    payoutCap: Number(document.getElementById('prop-cap').value) || 2000,
+    profitSplit: Number(document.getElementById('prop-split').value) || 90,
+    startDate: document.getElementById('prop-start').value,
+    lucidAccounts: Number(document.getElementById('prop-lucid').value) || 0,
+    mffuAccounts: Number(document.getElementById('prop-mffu').value) || 0
+  };
+}
+
+function autoMaxPayouts() {
+  const p = readProp();
+  const avail = tradingDaysBetween(p.startDate, state.plan.settings.endDate);
+  const T = Math.max(50, p.dailyTarget);
+  const evalD = Math.max(2, Math.ceil(3000/T));
+  const bufD = p.bufferPerAccount > 0 ? Math.ceil(p.bufferPerAccount/T) : 0;
+  const slow = Math.max(Math.max(5, Math.ceil(p.payoutCap/T)), Math.max(1, Math.ceil(p.payoutCap/T)));
+  const fundedAvail = avail - evalD - bufD;
+  if (fundedAvail <= 0) { alert('Daily target too low or buffer too high — no payouts fit.'); return; }
+  const max = Math.floor(fundedAvail / slow);
+  document.getElementById('prop-payouts').value = max;
+  state.propFirms.payoutsPerAccount = max;
+  saveState();
+  renderPropAll();
+}
+
+function renderPropInputs() {
+  const p = state.propFirms;
+  document.getElementById('prop-daily').value = p.dailyTarget;
+  document.getElementById('prop-payouts').value = p.payoutsPerAccount;
+  document.getElementById('prop-buffer').value = p.bufferPerAccount;
+  document.getElementById('prop-cap').value = p.payoutCap;
+  document.getElementById('prop-split').value = p.profitSplit;
+  document.getElementById('prop-start').value = p.startDate;
+  document.getElementById('prop-lucid').value = p.lucidAccounts;
+  document.getElementById('prop-mffu').value = p.mffuAccounts;
+  try { document.getElementById('prop-end-display').value = new Date(state.plan.settings.endDate).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}); } catch(e){}
+}
+
+function renderPropAll() {
+  Object.assign(state.propFirms, readProp());
+  saveState();
+  const p = state.propFirms;
+  const r = calcProp(p);
+
+  document.getElementById('prop-net').textContent = fmt(r.totalNet);
+  document.getElementById('prop-net-sub').textContent = `${p.profitSplit}% × ${fmt(p.payoutCap)} cap × ${p.payoutsPerAccount} × ${r.totalAccounts} accts`;
+  document.getElementById('prop-payouts-stat').textContent = r.totalPayouts;
+  document.getElementById('prop-payouts-sub').textContent = `${p.payoutsPerAccount}/acct × ${r.totalAccounts}`;
+  document.getElementById('prop-locked').textContent = fmt(r.totalLocked);
+  document.getElementById('prop-locked-sub').textContent = `${fmt(p.bufferPerAccount)}/acct × ${r.totalAccounts} (sim, not extracted)`;
+  document.getElementById('prop-days').textContent = r.daysNeeded;
+  const avail = tradingDaysBetween(p.startDate, state.plan.settings.endDate);
+  document.getElementById('prop-days-sub').textContent = `${avail} available · ${avail-r.daysNeeded} cushion`;
+
+  const doneDate = addTradingDays(p.startDate, r.daysNeeded);
+  let cushDays = 0;
+  try { cushDays = tradingDaysBetween(doneDate, state.plan.settings.endDate); } catch(e){}
+  document.getElementById('prop-done').textContent = fmtDate(doneDate);
+  document.getElementById('prop-cushion').textContent = cushDays >= 0 ? `${cushDays} cushion days to ${fmtDate(state.plan.settings.endDate)}` : `EXCEEDS departure by ${-cushDays} days`;
+
+  document.getElementById('firm-body').innerHTML = `
+    <tr><td><strong>LucidFlex 50K</strong></td><td class="num">${p.lucidAccounts}</td><td class="num">${r.lucid.evalDays}</td><td class="num">${r.lucid.bufferDays}</td><td class="num">${r.lucid.cycleDays} <span class="dim">(min 5)</span></td><td class="num">${r.lucid.daysPerAcct}</td><td class="num">${fmt(r.lucid.netPerPayout)}</td><td class="num">${fmt(r.lucid.netPerAcct)}</td><td class="num warn">${fmt(r.lucid.locked)}</td><td class="num pos"><strong>${fmt(r.lucid.total)}</strong></td></tr>
+    <tr><td><strong>MFFU Rapid 50K</strong></td><td class="num">${p.mffuAccounts}</td><td class="num">${r.mffu.evalDays}</td><td class="num">${r.mffu.bufferDays}</td><td class="num">${r.mffu.cycleDays}</td><td class="num">${r.mffu.daysPerAcct}</td><td class="num">${fmt(r.mffu.netPerPayout)}</td><td class="num">${fmt(r.mffu.netPerAcct)}</td><td class="num warn">${fmt(r.mffu.locked)}</td><td class="num pos"><strong>${fmt(r.mffu.total)}</strong></td></tr>
+    <tr style="background:#f5f5f3"><td colspan="8"><strong>TOTAL</strong></td><td class="num warn"><strong>${fmt(r.totalLocked)}</strong></td><td class="num pos"><strong>${fmt(r.totalNet)}</strong></td></tr>`;
+
+  const evalEnd = addTradingDays(p.startDate, r.lucid.evalDays);
+  const bufEnd = addTradingDays(evalEnd, r.lucid.bufferDays);
+  const lucidEnd = addTradingDays(bufEnd, r.lucid.cycleDays * p.payoutsPerAccount);
+  const mffuEnd = addTradingDays(bufEnd, r.mffu.cycleDays * p.payoutsPerAccount);
+  document.getElementById('phase-body').innerHTML = `
+    <tr><td><strong>1. Eval</strong></td><td>${fmtDate(p.startDate)} – ${fmtDate(evalEnd)}</td><td class="num">${r.lucid.evalDays}</td><td class="num dim">$0</td><td class="dim">$3K target each, sim profits don't transfer</td></tr>
+    <tr><td><strong>2. Buffer build</strong></td><td>${fmtDate(evalEnd)} – ${fmtDate(bufEnd)}</td><td class="num">${r.lucid.bufferDays}</td><td class="num warn">${fmt(r.totalLocked)} locked</td><td class="dim">$${p.bufferPerAccount}/acct stays in sim, NOT withdrawable</td></tr>
+    <tr><td><strong>3. MFFU Rapid payouts</strong></td><td>${fmtDate(bufEnd)} – ${fmtDate(mffuEnd)}</td><td class="num">${r.mffu.cycleDays * p.payoutsPerAccount}</td><td class="num pos">+${fmt(r.mffu.total)}</td><td class="dim">${p.payoutsPerAccount} payouts × ${r.mffu.cycleDays} days × ${p.mffuAccounts} accts</td></tr>
+    <tr><td><strong>4. LucidFlex payouts</strong></td><td>${fmtDate(bufEnd)} – ${fmtDate(lucidEnd)}</td><td class="num">${r.lucid.cycleDays * p.payoutsPerAccount}</td><td class="num pos">+${fmt(r.lucid.total)}</td><td class="dim">${p.payoutsPerAccount} payouts × ${r.lucid.cycleDays} days × ${p.lucidAccounts} accts</td></tr>
+    <tr style="background:#e6f1fb"><td><strong>All complete</strong></td><td><strong>${fmtDate(doneDate)}</strong></td><td class="num"><strong>${r.daysNeeded}</strong></td><td class="num pos"><strong>${fmt(r.totalNet)}</strong></td><td>Net withdrawable; ${fmt(r.totalLocked)} stays locked</td></tr>`;
+
+  const sensTargets = [200, 300, 400, 500, 700, 1000];
+  document.getElementById('sensitivity-body').innerHTML = sensTargets.map(t => {
+    const sp = {...p, dailyTarget:t};
+    const sr = calcProp(sp);
+    const dD = addTradingDays(p.startDate, sr.daysNeeded);
+    const cd = tradingDaysBetween(dD, state.plan.settings.endDate);
+    const tot = t * r.totalAccounts;
+    let risk;
+    if (t <= 250) risk = '<span class="pos">Very low</span>';
+    else if (t <= 400) risk = '<span class="pos">Low</span>';
+    else if (t <= 600) risk = '<span class="dim">Medium</span>';
+    else if (t <= 800) risk = '<span class="neg">High (March precedent ≈$700)</span>';
+    else risk = '<span class="neg"><strong>Very high</strong></span>';
+    const cur = t === p.dailyTarget;
+    const fits = cd >= 0;
+    return `<tr style="${cur?'background:#e6f1fb':''}"><td class="num">${fmt(t)}</td><td class="num">${fmt(tot)}</td><td class="num">${sr.daysNeeded}</td><td class="num">${fmtDate(dD)}</td><td class="num pos">${fmt(sr.totalNet)}</td><td class="num ${fits?'pos':'neg'}">${fits?cd:'-'+(-cd)}</td><td>${risk}</td></tr>`;
+  }).join('');
+
+  const payoutCounts = [1,2,3,4,5,6,8,10,15,20];
+  document.getElementById('payouts-body').innerHTML = payoutCounts.map(n => {
+    const np = {...p, payoutsPerAccount:n};
+    const nr = calcProp(np);
+    const dD = addTradingDays(p.startDate, nr.daysNeeded);
+    const cd = tradingDaysBetween(dD, state.plan.settings.endDate);
+    const cur = n === p.payoutsPerAccount;
+    const fits = cd >= 0;
+    return `<tr style="${cur?'background:#e6f1fb':''}"><td class="num">${n}</td><td class="num">${nr.daysNeeded}</td><td class="num">${fmtDate(dD)}</td><td class="num pos">${fmt(nr.totalNet)}</td><td class="num warn">${fmt(nr.totalLocked)}</td><td class="num ${fits?'pos':'neg'}">${fits?cd:'-'+(-cd)}</td></tr>`;
+  }).join('');
+
+  renderPropFlags(p, r, cushDays);
+  if (state.activeTab === 'combined') renderCombined();
+}
+
+function renderPropFlags(p, r, cushDays) {
+  const flags = [];
+  const dayTotal = p.dailyTarget * r.totalAccounts;
+  if (p.dailyTarget >= 700) flags.push({i:'🔴', t:`<strong>$${p.dailyTarget}/day × ${r.totalAccounts} accts = $${dayTotal.toLocaleString()}/day combined.</strong> TopstepX blew at ~$700/day in March 2026.`});
+  else if (p.dailyTarget >= 500) flags.push({i:'⚠️', t:`<strong>$${p.dailyTarget}/day target</strong> — approaching March precedent. Watch NQ creep.`});
+  else flags.push({i:'✓', t:`<strong>$${p.dailyTarget}/day is below March precedent.</strong> Same payout cap regardless of speed.`});
+  if (cushDays < 0) flags.push({i:'🔴', t:`<strong>Plan exceeds departure by ${-cushDays} days.</strong> Reduce N or increase daily target. Use "Auto-set max payouts".`});
+  else if (cushDays < 5) flags.push({i:'⚠️', t:`<strong>Only ${cushDays} cushion days.</strong>`});
+  else if (cushDays > 30) flags.push({i:'ℹ️', t:`<strong>${cushDays} cushion days available</strong> — room to lower daily target OR increase N.`});
+  if (p.dailyTarget * r.lucid.cycleDays < p.payoutCap && p.lucidAccounts > 0) flags.push({i:'ℹ️', t:`<strong>LucidFlex underutilized at $${p.dailyTarget}/day:</strong> 5-day cycle yields ${fmt(p.dailyTarget*r.lucid.cycleDays)} below ${fmt(p.payoutCap)} cap. Raise daily target above ${fmt(Math.ceil(p.payoutCap/5))} to hit cap.`});
+  if (p.bufferPerAccount > 0) flags.push({i:'ℹ️', t:`<strong>${fmt(r.totalLocked)} locked in buffers</strong> (${fmt(p.bufferPerAccount)} × ${r.totalAccounts}). Stays in sim, never extracted.`});
+  flags.push({i:'⚠️', t:`<strong>MNQ only.</strong> NQ creep is the March 2026 blow-up pattern.`});
+  document.getElementById('prop-flags').innerHTML = flags.map(f => `<div class="flag-row"><div style="flex:1"><span style="margin-right:8px">${f.i}</span>${f.t}</div></div>`).join('');
+}
+
+function renderCombined() {
+  const p = state.propFirms;
+  const r = calcProp(p);
+  const startTotal = state.plan.accounts.reduce((s,a) => s+(Number(a.amount)||0), 0);
+  let trading=0, other=0;
+  state.plan.incomes.forEach(inc => {
+    const t = calcStreamTotal(inc, state.plan.settings.startDate, state.plan.settings.endDate);
+    if (inc.frequency === 'daily_weekday') trading += t; else other += t;
+  });
+  let outflow = 0;
+  state.plan.expenses.forEach(e => outflow += calcStreamTotal(e, state.plan.settings.startDate, state.plan.settings.endDate));
+  const bk = startTotal + trading + other - outflow;
+  const grand = bk + r.totalNet;
+  const target = state.plan.settings.targetCash;
+  const gap = target - grand;
+
+  document.getElementById('combo-bk').textContent = fmt(bk);
+  document.getElementById('combo-bk-sub').textContent = `mode: ${MODE_LABELS[state.activeMode]||state.activeMode}`;
+  document.getElementById('combo-prop').textContent = fmt(r.totalNet);
+  document.getElementById('combo-prop-sub').textContent = `${p.payoutsPerAccount} payouts × ${r.totalAccounts} accts @ ${fmt(p.dailyTarget)}/day`;
+  document.getElementById('combo-grand').textContent = fmt(grand);
+  document.getElementById('combo-grand-sub').textContent = gap > 0 ? `${fmt(gap)} short of ${fmt(target)}` : `${fmt(-gap)} above ${fmt(target)}`;
+  document.getElementById('combo-target').textContent = fmt(target);
+  document.getElementById('combo-gap').textContent = (gap>0?'-':'+') + fmt(Math.abs(gap));
+  const gs = document.getElementById('combo-gap-stat');
+  gs.classList.remove('good','bad');
+  gs.classList.add(gap>0?'bad':'good');
+
+  const sources = [
+    {n:'Starting balances', a:startTotal},
+    {n:'BK trading gains', a:trading},
+    {n:'BK other income', a:other},
+    {n:'BK expenses', a:-outflow},
+    {n:`LucidFlex (×${p.lucidAccounts})`, a:r.lucid.total},
+    {n:`MFFU Rapid (×${p.mffuAccounts})`, a:r.mffu.total}
+  ];
+  document.getElementById('combo-body').innerHTML = sources.map(s => `<tr><td>${s.n}</td><td class="num ${s.a>=0?'pos':'neg'}">${s.a>=0?'+':''}${fmt(s.a)}</td><td class="num dim">${grand>0?((s.a/grand)*100).toFixed(1)+'%':'-'}</td></tr>`).join('') + `<tr><td class="dim">Locked in buffers (sim, not extracted)</td><td class="num warn">${fmt(r.totalLocked)}</td><td class="num dim">—</td></tr><tr style="background:#e6f1fb"><td><strong>Grand total</strong></td><td class="num pos"><strong>${fmt(grand)}</strong></td><td class="num dim">100%</td></tr>`;
+}
+
+function exportJSON() {
+  const data = JSON.stringify(state, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `bk_dashboard_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function handleImport(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      state = migrate(data);
+      saveState();
+      renderAll();
+      alert('Imported successfully.');
+    } catch(err) { alert('Import failed: ' + err.message); }
+  };
+  reader.readAsText(file);
+}
+
+function resetAll() {
+  if (!confirm('Reset all values to defaults? Current edits will be lost.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state = JSON.parse(JSON.stringify(DEFAULTS));
+  renderAll();
+}
+
+function renderAll() {
+  renderBKAll();
+  renderPropInputs();
+  renderPropAll();
+  switchTab(state.activeTab || 'bk');
+}
+
+function init() {
+  state = loadState();
+  ['start-date','end-date','target-cash','safe-buffer'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', recalc);
+  });
+  ['prop-daily','prop-payouts','prop-buffer','prop-cap','prop-split','prop-start','prop-lucid','prop-mffu'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', renderPropAll);
+  });
+  const imp = document.getElementById('import-file');
+  if (imp) imp.addEventListener('change', handleImport);
+  renderAll();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+</script>
+</body>
+</html>
